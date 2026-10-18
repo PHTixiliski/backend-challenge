@@ -129,6 +129,12 @@ export class WagerTransactionEntity {
   })
   processedAt: Date | null = null;
 
+  @Property({ fieldName: "reference_attempts", type: "integer", default: 0 })
+  referenceAttempts = 0;
+
+  @Property({ fieldName: "reference_next_attempt_at", type: "datetime", nullable: true })
+  referenceNextAttemptAt: Date | null = null;
+
   @Property({ fieldName: "created_at", type: "datetime" })
   createdAt: Date = new Date();
 

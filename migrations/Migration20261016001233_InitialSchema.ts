@@ -21,4 +21,11 @@ export class Migration20261016001233_InitialSchema extends Migration {
     this.addSql(`alter table "wallet_ledger_entries" add constraint "wallet_ledger_transaction_unique" unique ("transaction_id");`);
   }
 
+  override down(): void {
+    this.addSql(`drop table if exists "wallet_ledger_entries";`);
+    this.addSql(`drop table if exists "wager_transactions";`);
+    this.addSql(`drop table if exists "wallets";`);
+    this.addSql(`drop table if exists "idempotency_records";`);
+  }
+
 }

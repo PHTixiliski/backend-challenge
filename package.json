@@ -7,7 +7,12 @@
     "start": "bun dist/main.js",
     "start:dev": "bun --watch src/main.ts",
     "start:debug": "nest start --debug --watch",
-    "test": "bun test"
+    "test": "bun test test/unit",
+    "test:integration": "bun test --max-concurrency=1 test/integration",
+    "test:integration:commit-ack": "POSTGRES_DB=wagering ALLOW_ORIGINAL_DB_INTEGRATION=1 bun test test/integration/messaging/sqs-commit-before-ack.spec.ts",
+    "test:integration:retry-dlq": "bun test test/integration/messaging/sqs-retry-dlq.spec.ts",
+    "test:integration:outbox-recovery": "POSTGRES_DB=wagering ALLOW_ORIGINAL_DB_INTEGRATION=1 bun test test/integration/messaging/outbox-crash-recovery.spec.ts",
+    "test:integration:sqs-shutdown": "bun test test/integration/messaging/sqs-shutdown.spec.ts"
   },
   "devDependencies": {
     "@mikro-orm/cli": "^7.2.5",
@@ -20,6 +25,7 @@
     "typescript": "5.8.3"
   },
   "dependencies": {
+    "@aws-sdk/client-sqs": "^3.1152.0",
     "@mikro-orm/core": "^7.2.5",
     "@mikro-orm/decorators": "^7.2.5",
     "@mikro-orm/migrations": "^7.2.5",

@@ -11,17 +11,21 @@ export interface WalletProps {
   currency: string;
   balance: Money;
   version: number;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export class Wallet {
   private currentBalance: Money;
   private currentVersion: number;
+  private currentUpdatedAt: Date;
 
   readonly id: string;
   readonly playerId: string;
   readonly currency: string;
+  readonly createdAt: Date;
 
-  constructor(props: WalletProps) {
+  private constructor(props: WalletProps) {
     if (!props.id.trim() || !props.playerId.trim()) {
       throw new DomainError(
         "INVALID_WALLET",
@@ -55,6 +59,30 @@ export class Wallet {
     this.currency = props.currency;
     this.currentBalance = props.balance;
     this.currentVersion = props.version;
+    this.createdAt = new Date(props.createdAt ?? new Date());
+    this.currentUpdatedAt = new Date(props.updatedAt ?? this.createdAt);
+  }
+
+  static open(props: {
+    id: string;
+    playerId: string;
+    initialBalance: Money;
+  }): Wallet {
+    return new Wallet({
+      id: props.id,
+      playerId: props.playerId,
+      currency: props.initialBalance.currency,
+      balance: props.initialBalance,
+      version: 1,
+    });
+  }
+
+  static rehydrate(state: WalletProps): Wallet {
+    return new Wallet(state);
+  }
+
+  get updatedAt(): Date {
+    return new Date(this.currentUpdatedAt);
   }
 
   get balance(): Money {
@@ -96,7 +124,7 @@ export class Wallet {
         ? previousBalance.add(amount)
         : previousBalance.subtract(amount);
 
-    const entry = new WalletLedgerEntry({
+    const entry = WalletLedgerEntry.create({
       walletId: this.id,
       transactionId,
       type,
@@ -107,6 +135,7 @@ export class Wallet {
 
     this.currentBalance = nextBalance;
     this.currentVersion += 1;
+    this.currentUpdatedAt = new Date();
 
     return entry;
   }

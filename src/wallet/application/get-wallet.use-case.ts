@@ -7,8 +7,9 @@ import {
 } from "../domain/wallet.repository";
 
 export interface GetWalletInput {
-  playerId: string;
-  currency: string;
+  walletId?: string;
+  playerId?: string;
+  currency?: string;
 }
 
 @Injectable()
@@ -19,7 +20,13 @@ export class GetWalletUseCase {
   ) {}
 
   async execute(input: GetWalletInput): Promise<Wallet> {
-    const playerId = input.playerId.trim();
+    if (input.walletId?.trim()) {
+      const wallet = await this.walletRepository.findById(input.walletId.trim());
+      if (!wallet) throw new DomainError("WALLET_NOT_FOUND", "Wallet was not found.");
+      return wallet;
+    }
+
+    const playerId = input.playerId?.trim() ?? "";
 
     if (!playerId) {
       throw new DomainError("INVALID_PLAYER_ID", "Player ID is required.");
@@ -27,7 +34,7 @@ export class GetWalletUseCase {
 
     const wallet = await this.walletRepository.findByPlayerIdAndCurrency(
       playerId,
-      input.currency,
+      input.currency ?? "BRL",
     );
 
     if (!wallet) {

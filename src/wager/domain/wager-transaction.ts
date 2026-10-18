@@ -1,5 +1,6 @@
 import { DomainError } from "../../shared/domain/domain-error";
 import { Money } from "../../wallet/domain/money";
+import { randomUUID } from "node:crypto";
 import {
   TERMINAL_TRANSACTION_STATUSES,
   WagerTransactionStatus,
@@ -26,6 +27,15 @@ export interface WagerTransactionProps {
   processedAt?: Date | null;
 }
 
+export type CreateWagerTransactionProps = Omit<
+  WagerTransactionProps,
+  | "id"
+  | "status"
+  | "referenceTransactionId"
+  | "failureCode"
+  | "processedAt"
+> & { id?: string };
+
 export class WagerTransaction {
   readonly id: string;
   readonly providerId: string;
@@ -39,14 +49,14 @@ export class WagerTransaction {
   readonly type: WagerTransactionType;
   readonly amount: Money;
   readonly referenceExternalTransactionId: string | null;
-  readonly referenceTransactionId: string | null;
+  private currentReferenceTransactionId: string | null;
   readonly createdAt: Date;
 
   private currentStatus: WagerTransactionStatus;
   private currentFailureCode: string | null;
   private currentProcessedAt: Date | null;
 
-  constructor(props: WagerTransactionProps) {
+  private constructor(props: WagerTransactionProps) {
     const requiredFields: Array<[string, string]> = [
       ["id", props.id],
       ["providerId", props.providerId],
@@ -127,13 +137,25 @@ export class WagerTransaction {
     this.type = props.type;
     this.amount = props.amount;
     this.referenceExternalTransactionId = referenceExternalTransactionId;
-    this.referenceTransactionId = referenceTransactionId;
+    this.currentReferenceTransactionId = referenceTransactionId;
     this.currentStatus = props.status;
     this.currentFailureCode = props.failureCode ?? null;
     this.createdAt = new Date(props.createdAt ?? new Date());
     this.currentProcessedAt = props.processedAt
       ? new Date(props.processedAt)
       : null;
+  }
+
+  static create(props: CreateWagerTransactionProps): WagerTransaction {
+    return new WagerTransaction({
+      ...props,
+      id: props.id ?? randomUUID(),
+      status: WagerTransactionStatus.PENDING,
+    });
+  }
+
+  static rehydrate(state: WagerTransactionProps): WagerTransaction {
+    return new WagerTransaction(state);
   }
 
   get status(): WagerTransactionStatus {
@@ -146,6 +168,17 @@ export class WagerTransaction {
 
   get processedAt(): Date | null {
     return this.currentProcessedAt ? new Date(this.currentProcessedAt) : null;
+  }
+
+  get referenceTransactionId(): string | null {
+    return this.currentReferenceTransactionId;
+  }
+
+  resolveReference(transactionId: string): void {
+    if (!transactionId.trim() || transactionId === this.id) {
+      throw new DomainError("INVALID_REFERENCE", "Resolved reference is invalid.");
+    }
+    this.currentReferenceTransactionId = transactionId;
   }
 
   markPendingReference(): void {

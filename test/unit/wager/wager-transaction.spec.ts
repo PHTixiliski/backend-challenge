@@ -2,7 +2,10 @@ import { describe, expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
 import { DomainError } from "../../../src/shared/domain/domain-error";
 import { Money } from "../../../src/wallet/domain/money";
-import { WagerTransaction } from "../../../src/wager/domain/wager-transaction";
+import {
+  WagerTransaction,
+  type CreateWagerTransactionProps,
+} from "../../../src/wager/domain/wager-transaction";
 import {
   WagerTransactionStatus,
   WagerTransactionType,
@@ -10,10 +13,9 @@ import {
 
 describe("WagerTransaction", () => {
   function createTransaction(
-    overrides: Partial<ConstructorParameters<typeof WagerTransaction>[0]> = {},
+    overrides: Partial<CreateWagerTransactionProps> = {},
   ): WagerTransaction {
-    return new WagerTransaction({
-      id: randomUUID(),
+    return WagerTransaction.create({
       providerId: "provider-test",
       externalTransactionId: "external-tx-001",
       idempotencyKey: "provider-test:external-tx-001",
@@ -24,7 +26,6 @@ describe("WagerTransaction", () => {
       gameId: "game-001",
       type: WagerTransactionType.BET,
       amount: Money.create("10.00", "BRL"),
-      status: WagerTransactionStatus.PENDING,
       ...overrides,
     });
   }
@@ -46,9 +47,8 @@ describe("WagerTransaction", () => {
   });
 
   test("rejects transitions from terminal states", () => {
-    const transaction = createTransaction({
-      status: WagerTransactionStatus.PROCESSED,
-    });
+    const transaction = createTransaction();
+    transaction.markProcessed();
     expect(() => transaction.markFailed("INTERNAL_ERROR")).toThrow(DomainError);
   });
 
@@ -60,7 +60,7 @@ describe("WagerTransaction", () => {
   test("requires a reference for refunds", () => {
     expect(
       () =>
-        new WagerTransaction({
+        WagerTransaction.create({
           id: "refund-1",
           providerId: "provider-test",
           externalTransactionId: "external-refund-1",
@@ -72,7 +72,6 @@ describe("WagerTransaction", () => {
           gameId: "game-1",
           type: WagerTransactionType.REFUND,
           amount: Money.create("10.00", "BRL"),
-          status: WagerTransactionStatus.PENDING,
         }),
     ).toThrow(DomainError);
   });
@@ -80,7 +79,7 @@ describe("WagerTransaction", () => {
   test("rejects a self-referencing transaction", () => {
     expect(
       () =>
-        new WagerTransaction({
+        WagerTransaction.create({
           id: "transaction-1",
           providerId: "provider-test",
           externalTransactionId: "external-tx-1",
@@ -92,8 +91,6 @@ describe("WagerTransaction", () => {
           gameId: "game-1",
           type: WagerTransactionType.ROLLBACK,
           amount: Money.create("10.00", "BRL"),
-          status: WagerTransactionStatus.PENDING,
-          referenceTransactionId: "transaction-1",
           referenceExternalTransactionId: "external-tx-1",
         }),
     ).toThrow(DomainError);

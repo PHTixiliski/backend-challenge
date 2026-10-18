@@ -7,7 +7,6 @@ import { WagerTransaction } from "../domain/wager-transaction";
 import type { WagerTransactionRepository } from "../domain/wager-transaction.repository";
 import {
   WagerTransactionStatus,
-  WagerTransactionType,
 } from "../domain/wager-transaction.types";
 import { WagerTransactionEntity } from "./wager-transaction.entity";
 
@@ -44,6 +43,10 @@ export class MikroOrmWagerTransactionRepository implements WagerTransactionRepos
       referenceTransactionId: transaction.referenceTransactionId,
       failureCode: transaction.failureCode,
       processedAt: transaction.processedAt,
+      referenceAttempts: 0,
+      referenceNextAttemptAt: transaction.status === WagerTransactionStatus.PENDING_REFERENCE
+        ? new Date(Date.now() + 2000)
+        : null,
       createdAt: transaction.createdAt,
       updatedAt: new Date(),
     });
@@ -52,7 +55,7 @@ export class MikroOrmWagerTransactionRepository implements WagerTransactionRepos
   }
 
   private toDomain(entity: WagerTransactionEntity): WagerTransaction {
-    return new WagerTransaction({
+    return WagerTransaction.rehydrate({
       id: entity.id,
       providerId: entity.providerId,
       externalTransactionId: entity.externalTransactionId,

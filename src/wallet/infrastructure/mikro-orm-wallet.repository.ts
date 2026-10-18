@@ -15,6 +15,11 @@ export class MikroOrmWalletRepository implements WalletRepository {
     private readonly walletEntityRepository: EntityRepository<WalletEntity>,
   ) {}
 
+  async findById(walletId: string): Promise<Wallet | null> {
+    const entity = await this.walletEntityRepository.findOne({ id: walletId });
+    return entity ? this.toDomain(entity) : null;
+  }
+
   async findByPlayerIdAndCurrency(
     playerId: string,
     currency: string,
@@ -32,16 +37,14 @@ export class MikroOrmWalletRepository implements WalletRepository {
   }
 
   async save(wallet: Wallet): Promise<void> {
-    const now = new Date();
-
     const entity = this.walletEntityRepository.create({
       id: wallet.id,
       playerId: wallet.playerId,
       currency: wallet.currency,
       balance: wallet.balance.toString(),
       version: wallet.version,
-      createdAt: now,
-      updatedAt: now,
+      createdAt: wallet.createdAt,
+      updatedAt: wallet.updatedAt,
     });
 
     try {
@@ -64,12 +67,14 @@ export class MikroOrmWalletRepository implements WalletRepository {
   }
 
   private toDomain(entity: WalletEntity): Wallet {
-    return new Wallet({
+    return Wallet.rehydrate({
       id: entity.id,
       playerId: entity.playerId,
       currency: entity.currency,
       balance: Money.create(entity.balance, entity.currency),
       version: entity.version,
+      createdAt: entity.createdAt,
+      updatedAt: entity.updatedAt,
     });
   }
 }

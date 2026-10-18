@@ -3,6 +3,7 @@ import { Wallet } from './wallet';
 export const WALLET_REPOSITORY = Symbol('WALLET_REPOSITORY');
 
 export interface WalletRepository {
+  findById(walletId: string): Promise<Wallet | null>;
   findByPlayerIdAndCurrency(
     playerId: string,
     currency: string,

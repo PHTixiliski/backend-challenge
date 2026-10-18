@@ -22,7 +22,7 @@ export class Money {
       );
     }
 
-    if (!amount.trim()) {
+    if (!amount.trim() || !/^-?\d+(?:\.\d{1,2})?$/.test(amount)) {
       throw new DomainError(
         'INVALID_MONEY_AMOUNT',
         'Money amount cannot be empty.',
@@ -77,6 +77,19 @@ export class Money {
     return this.amount.isNegative();
   }
 
+  isPositive(): boolean {
+    return this.amount.isPositive();
+  }
+
+  negate(): Money {
+    return new Money(this.amount.negated(), this.currency);
+  }
+
+  isLessThan(other: Money): boolean {
+    this.ensureSameCurrency(other);
+    return this.amount.lessThan(other.amount);
+  }
+
   isZero(): boolean {
     return this.amount.isZero();
   }
@@ -90,6 +103,10 @@ export class Money {
 
   toString(): string {
     return this.amount.toFixed(MONEY_SCALE);
+  }
+
+  toJSON(): { amount: string; currency: string } {
+    return { amount: this.toString(), currency: this.currency };
   }
 
   private ensureSameCurrency(other: Money): void {

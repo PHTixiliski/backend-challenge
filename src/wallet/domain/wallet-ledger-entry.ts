@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { Money } from "./money";
+import { DomainError } from "../../shared/domain/domain-error";
 
 export type WalletLedgerEntryType = "CREDIT" | "DEBIT";
 
@@ -24,7 +25,7 @@ export class WalletLedgerEntry {
   readonly balanceAfter: Money;
   readonly createdAt: Date;
 
-  constructor(props: WalletLedgerEntryProps) {
+  private constructor(props: WalletLedgerEntryProps) {
     if (!props.walletId.trim()) {
       throw new Error("Wallet ID cannot be empty.");
     }
@@ -48,6 +49,16 @@ export class WalletLedgerEntry {
       throw new Error("Ledger entry currencies must match.");
     }
 
+    const expectedAfter = props.type === "CREDIT"
+      ? props.balanceBefore.add(props.amount)
+      : props.balanceBefore.subtract(props.amount);
+    if (!expectedAfter.equals(props.balanceAfter)) {
+      throw new DomainError(
+        "UNBALANCED_LEDGER_ENTRY",
+        "Ledger balance after must equal balance before adjusted by the entry.",
+      );
+    }
+
     this.id = props.id ?? randomUUID();
     this.walletId = props.walletId;
     this.transactionId = props.transactionId;
@@ -58,5 +69,13 @@ export class WalletLedgerEntry {
     this.createdAt = new Date(props.createdAt ?? new Date());
 
     Object.freeze(this);
+  }
+
+  static create(props: WalletLedgerEntryProps): WalletLedgerEntry {
+    return new WalletLedgerEntry(props);
+  }
+
+  static rehydrate(state: WalletLedgerEntryProps & { id: string }): WalletLedgerEntry {
+    return new WalletLedgerEntry(state);
   }
 }
